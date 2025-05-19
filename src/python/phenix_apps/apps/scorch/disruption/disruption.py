@@ -150,12 +150,16 @@ class Disruption(ComponentBase):
             start_delay = float(self.metadata.dos.start_delay)
             attack_duration = float(self.metadata.dos.attack_duration)
 
-            timeout = attack_duration + start_delay + 5.0 # type: float
-            tmp_run_duration = run_duration - 60.0
+            if start_delay < 0 or attack_duration < 1:
+                self.print(f"ERROR (DOS): Start delay must be > 0 and Attack duration must be > 1.")
+                raise ValueError(f"Invalid durations: Delay {start_delay}, Duration {attack_duration}")
+
+            timeout = attack_duration + start_delay + 5.0 # type: float; 5s buffer to allow for experiment startup
+            tmp_run_duration = run_duration - 60.0 # 1 minute buffer to allow disruption to clean up
             # ensure timeout doesn't exceed experiment duration
             if timeout > tmp_run_duration:
-                timeout = tmp_run_duration - start_delay - 1.0
-                timeout = float(abs(timeout))
+                timeout = tmp_run_duration - start_delay
+                timeout = float(timeout)
             else:
                 timeout = attack_duration
 
@@ -181,6 +185,10 @@ class Disruption(ComponentBase):
         elif self.metadata.current_disruption == "physical":
             # run physical attack with start delay
             physical_start_delay = float(self.metadata.physical.start_delay)
+
+            if physical_start_delay < 0:
+                self.print(f"ERROR (physical): Start delay must be > 0.")
+                raise ValueError(f"Invalid durations: Delay {start_delay}")
             
             # start delay
             self.print(f"sleeping for {physical_start_delay} seconds")
@@ -201,12 +209,16 @@ class Disruption(ComponentBase):
             dos_start_delay = float(self.metadata.dos.start_delay)
             dos_attack_duration = float(self.metadata.dos.attack_duration)
 
+            if physical_start_delay < 0 or dos_start_delay < 0 or dos_attack_duration < 1:
+                self.print(f"ERROR (cyber_physical): All start delays must be > 0 and DOS Attack duration must be > 1.")
+                raise ValueError(f"Invalid durations: Physical Delay {physical_start_delay}, DOS Delay {start_delay}, DOS Duration {attack_duration}")
+
             # make sure total dos attack run time does not exceed total run_duration
-            dos_run_duration = dos_attack_duration + dos_start_delay + 5.0
-            tmp_run_duration = run_duration - 60.0
+            dos_run_duration = dos_attack_duration + dos_start_delay + 5.0 # type: float; 5s buffer to allow for experiment startup
+            tmp_run_duration = run_duration - 60.0 # 1 minute buffer to allow disruption to clean up
             if dos_run_duration > tmp_run_duration:
-                dos_run_duration = tmp_run_duration - dos_start_delay - 1.0
-                dos_run_duration = float(abs(dos_run_duration))
+                dos_run_duration = tmp_run_duration - dos_start_delay
+                dos_run_duration = float(dos_run_duration)
             else:
                 dos_run_duration = dos_attack_duration
 
